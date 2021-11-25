@@ -8,6 +8,7 @@ CREATE TABLE `job` (
   `content` text COMMENT '页面内容',
   `url` varchar(50) NOT NULL '页面链接',
   `status` tinyint(1) NOT NULL DEFAULT '0' COMMENT '职位状态 0:初始',
+  `code` varchar(10) NOT NULL DEFAULT '' COMMENT '任务代码',
   `task` varchar(50) NOT NULL COMMENT 'Task信息',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建记录的时间',
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '记录修改时间',

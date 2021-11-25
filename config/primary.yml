@@ -1,0 +1,17 @@
+
+# 日志
+logger:
+  level: debug
+  levelColor: true
+  format: json
+  stdout: true
+  file:
+    filename: "/Users/tiger/go/src/campaign/logs/admin/app.log"
+    maxSize: 500
+
+yjs_task:
+  url: "https://www.yingjiesheng.com/zhuanye/jisuanji/hebei/list_1.html"
+  code: "YJS"
+  retry: 3
+  name: "应届生求职网"
+
