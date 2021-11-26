@@ -30,7 +30,7 @@ func NewYJSTask(url, code, name string, retry int) *YJSTask {
 }
 
 // 获取网页详情
-func (task *YJSTask) Run(ctx context.Context, ch chan<- ITask) (string, error) {
+func (task *YJSTask) RunList(ctx context.Context, ch chan<- ITask) ([]string, error) {
 	// 构造请求
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", task.Url, nil)
@@ -40,7 +40,7 @@ func (task *YJSTask) Run(ctx context.Context, ch chan<- ITask) (string, error) {
 	req.Header.Add("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36")
 	req.Header.Add("referer", "https://www.yingjiesheng.com/zhuanye/jisuanji/hebei/")
 	req.Header.Add("accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
-	// req.Header.Add("accept-encoding", "gzip, deflate, br")
+	req.Header.Add("accept-encoding", "gzip, deflate, br")
 	req.Header.Add("accept-language", "zh-CN,zh;q=0.9")
 	req.Header.Add("sec-ch-ua", "\"Google Chrome\";v=\"95\", \"Chromium\";v=\"95\", \";Not A Brand\";v=\"99\"")
 	req.Header.Add("sec-ch-ua-platform", "macOS")
@@ -51,19 +51,20 @@ func (task *YJSTask) Run(ctx context.Context, ch chan<- ITask) (string, error) {
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Printf("request error:%v", err)
-		return "", nil
+		return nil, nil
 	}
 	defer resp.Body.Close()
 	// 解析内容
 	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Printf("ioutil readall error:%v", err)
-		return "", nil
+		return nil, nil
 	}
+	// 编码转换
 	result := utils.ConvertToString(string(content), "GBK", "UTF-8")
 	fmt.Printf("content:%s", result)
 	// 判断分支
-	return "", nil
+	return nil, nil
 
 }
 
