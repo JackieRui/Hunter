@@ -15,5 +15,5 @@ func TestYJSTaskRun(t *testing.T) {
 		name  = "应届生求职网"
 	)
 	task := NewYJSTask(url, code, name, retry)
-	task.Run(ctx, ch)
+	task.RunList(ctx, ch)
 }

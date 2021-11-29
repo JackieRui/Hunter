@@ -22,6 +22,7 @@ func NewYJSTask(url, code, name string, retry int) *YJSTask {
 	return &YJSTask{
 		Task{
 			Url:   url,
+			Type:  0,
 			Code:  code,
 			Retry: retry,
 			Name:  name,
@@ -31,6 +32,9 @@ func NewYJSTask(url, code, name string, retry int) *YJSTask {
 
 // 获取网页详情
 func (task *YJSTask) RunList(ctx context.Context, ch chan<- ITask) ([]string, error) {
+	if task.Retry <= 0 {
+		return nil, utils.ErrorWithCodeMsg(utils.StatusRetryLimit, "重试次数已达上限")
+	}
 	// 构造请求
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", task.Url, nil)
@@ -47,18 +51,18 @@ func (task *YJSTask) RunList(ctx context.Context, ch chan<- ITask) ([]string, er
 	req.Header.Add("sec-fetch-dest", "document")
 	req.Header.Add("sec-fetch-mode", "navigate")
 	req.Header.Add("sec-fetch-site", "same-origin")
-
+	// 请求资源
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Printf("request error:%v", err)
-		return nil, nil
+		fmt.Printf("请求资源错误:%v", err)
+		return nil, utils.ErrorWithCodeMsg(utils.StatusBadRequest, "请求资源错误")
 	}
 	defer resp.Body.Close()
-	// 解析内容
+	// 读取内容
 	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Printf("ioutil readall error:%v", err)
-		return nil, nil
+		fmt.Printf("资源解析错误:%v", err)
+		return nil, utils.ErrorWithCodeMsg(utils.StatusErrorParse, "资源解析错误")
 	}
 	// 编码转换
 	result := utils.ConvertToString(string(content), "GBK", "UTF-8")

@@ -18,10 +18,11 @@ type ITask interface {
 }
 
 type Task struct {
-	Url   string `json:"url"`
-	Code  string `json:"code"`
-	Retry int    `json:"retry"`
-	Name  string `json:"name"`
+	Url   string `json:"url"`   // 抓取链接
+	Type  int    `json:"type"`  // 类型 0:列表页 1:详情页 列表页数据未存储到库
+	Retry int    `json:"retry"` // 重试次数
+	Code  string `json:"code"`  // 抓取资源代码
+	Name  string `json:"name"`  // 资源中文名称
 }
 
 type Config struct {
