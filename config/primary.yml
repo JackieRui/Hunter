@@ -10,7 +10,7 @@ logger:
     maxSize: 500
 
 yjs_task:
-  url: "https://www.yingjiesheng.com/zhuanye/jisuanji/hebei/list_1.html"
+  url: "https://www.yingjiesheng.com/zhuanye/jisuanji/hebei/list_%s.html"
   code: "YJS"
   retry: 3
   name: "应届生求职网"
