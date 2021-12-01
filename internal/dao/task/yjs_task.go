@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 
 	"git.hunter.net/hunter/internal/dao/job"
 	"git.hunter.net/hunter/internal/utils"
@@ -72,6 +73,12 @@ func (task *YJSTask) RunList(ctx context.Context, ch chan<- ITask) ([]string, er
 	}
 
 	// 解析内容
+	jobliPattern := regexp.MustCompile("<tr class=\"jobli\">(?s:(.*?))</tr>")
+	joblis := jobliPattern.FindAllString(string(content), -1)
+	for _, jobli := range joblis {
+		fmt.Printf("%v\n", jobli)
+		fmt.Println("----------------")
+	}
 	// tablePattern := regexp.MustCompile("<table class=\"jobul\">(.*?)<tbody>(.*?)</tbody>(.*?)</table>")
 	// tbody := tablePattern.FindString(result)
 	return nil, nil
