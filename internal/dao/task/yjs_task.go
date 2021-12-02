@@ -2,6 +2,7 @@ package task
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -164,9 +165,20 @@ func (task *YJSTask) RunDetail(ctx context.Context, ch chan<- ITask) (*job.Job, 
 	}
 	// 编码转换
 	result := utils.ConvertToString(string(content), "GBK", "UTF-8")
-	err = ioutil.WriteFile("./detail1.html", []byte(result), 0666)
-	if err != nil {
-		fmt.Printf("写文件错误:%v", err)
+	divPattern := regexp.MustCompile("<div class=\"comtit clear\">(?s:.*?)<h1>(?s:(.*?))</h1>(?s:(.*?))<div class=\"sp_msg\">(?s:.*?)" +
+		"<div id=\"wordDiv\" class=\"reprintJob tborder\">(?s:(.*?))<ul class=\"linkbtn\">")
+	divs := divPattern.FindAllStringSubmatch(result, 1)
+	if len(divs) > 0 {
+		t, _ := json.Marshal(task)
+		j := &job.Job{
+			Company: divs[0][1],
+			Title:   divs[0][2],
+			Content: divs[0][3],
+			Url:     task.Url,
+			Status:  0,
+			Task:    string(t),
+		}
+		return j, nil
 	}
 	return nil, nil
 }
