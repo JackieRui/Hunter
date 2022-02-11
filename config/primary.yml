@@ -6,11 +6,11 @@ logger:
   format: json
   stdout: true
   file:
-    filename: "/Users/tiger/go/src/campaign/logs/admin/app.log"
+    filename: "../logs/task.log"
     maxSize: 500
 
 yjs_task:
-  url: "https://www.yingjiesheng.com/zhuanye/jisuanji/hebei/list_%s.html"
+  url: "https://www.yingjiesheng.com/hebeijob/list_%s.html"
   code: "YJS"
   retry: 3
   name: "应届生求职网"

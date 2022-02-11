@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"strings"
 
+	"git.hunter.net/hunter/internal/dao/log"
+
 	"git.hunter.net/hunter/internal/dao/job"
 	"git.hunter.net/hunter/internal/utils"
 )
@@ -21,14 +23,16 @@ const YJSPrefix = "https://www.yingjiesheng.com"
 
 type YJSTask struct {
 	Task
+	Page int `json:"page"` // 抓取第几页
+	Type int `json:"type"` // 类型 0:列表页 1:详情页 列表页数据未存储到库
 }
 
 func NewYJSTask(url, code, name string, retry int) *YJSTask {
 	return &YJSTask{
-		Task{
+		Page: 1,
+		Type: 0,
+		Task: Task{
 			Url:   url,
-			Page:  1,
-			Type:  0,
 			Code:  code,
 			Retry: retry,
 			Name:  name,
@@ -36,19 +40,30 @@ func NewYJSTask(url, code, name string, retry int) *YJSTask {
 	}
 }
 
-// 获取列表页数据
-func (task *YJSTask) RunList(ctx context.Context, ch chan<- ITask) {
-	if task.Retry <= 0 {
+// Run 任务开始运行
+func (t *YJSTask) Run(ctx context.Context, ch chan<- ITask) {
+	log.L(ctx).Info(fmt.Sprintf("YJSTask URL: %v, Page: %v Type: %v", t.Url, t.Page, t.Type))
+	if t.Type == 0 {
+		t.RunList(ctx, ch)
+	} else {
+		t.RunDetail(ctx, ch)
+	}
+}
+
+// RunList 获取列表页数据
+func (t *YJSTask) RunList(ctx context.Context, ch chan<- ITask) {
+	if t.Retry <= 0 {
 		// 记录日志 不再抓取此任务
-		// return nil, utils.ErrorWithCodeMsg(utils.StatusRetryLimit, "重试次数已达上限")
+		log.L(ctx).Info(fmt.Sprintf("YJSTask %v 重试次数已达上限", t))
 		return
 	}
 	// 构造请求
 	client := &http.Client{}
-	var url = fmt.Sprintf(task.Url, task.Page)
+	var url = fmt.Sprintf(t.Url, t.Page)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		fmt.Printf("Task Request error:%v", err)
+		log.L(ctx).Info(fmt.Sprintf("YJSTask URL:%v Task Request error:%v", t.Url, err))
+		return
 	}
 	req.Header.Add("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36")
 	req.Header.Add("referer", "https://www.yingjiesheng.com/zhuanye/jisuanji/hebei/")
@@ -64,15 +79,23 @@ func (task *YJSTask) RunList(ctx context.Context, ch chan<- ITask) {
 	resp, err := client.Do(req)
 	if err != nil {
 		// 记录日志 重新抓取
-		task.Retry -= 1
+		log.L(ctx).Info(fmt.Sprintf("YJSTask client.Do error:%v", err))
+		t.Retry -= 1
+		log.L(ctx).Info(fmt.Sprintf("YJSTask URL:%v Retry:%v", t.Url, t.Retry))
+		ch <- t
 		return
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	// 读取内容
 	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		// 记录日志 重新抓取
-		task.Retry -= 1
+		log.L(ctx).Info(fmt.Sprintf("YJSTask ioutil.ReadAll error:%v", err))
+		t.Retry -= 1
+		log.L(ctx).Info(fmt.Sprintf("YJSTask URL:%v Retry:%v", t.Url, t.Retry))
+		ch <- t
 		return
 	}
 	// 编码转换
@@ -99,47 +122,52 @@ func (task *YJSTask) RunList(ctx context.Context, ch chan<- ITask) {
 				}
 				// 构造详情页抓取task 发送到ch TODO
 				detailTask := &YJSTask{
-					Task{
+					Page: 0,
+					Type: 1,
+					Task: Task{
 						Url:   url,
-						Page:  0,
-						Type:  1,
-						Code:  task.Code,
+						Code:  t.Code,
 						Retry: 3,
-						Name:  task.Name,
+						Name:  t.Name,
 					},
 				}
-				fmt.Printf("%v", detailTask)
+				ch <- detailTask
+				//fmt.Printf("%v", detailTask)
 			} else {
 				// 历史记录 直接返回 不再抓取解析
+				log.L(ctx).Info(fmt.Sprintf("YJSTask currentDate:%v Done", currentDate))
 				return
 			}
 		}
 	}
 	// 构造下一列表页的抓取任务
 	nextTask := &YJSTask{
-		Task{
-			Url:   fmt.Sprintf(task.Url, task.Page+1),
-			Page:  task.Page + 1,
-			Type:  task.Type,
-			Code:  task.Code,
+		Page: t.Page + 1,
+		Type: t.Type,
+		Task: Task{
+			Url:   t.Url,
+			Code:  t.Code,
 			Retry: 3,
-			Name:  task.Name,
+			Name:  t.Name,
 		},
 	}
-	fmt.Printf("%v", nextTask)
+	log.L(ctx).Info(fmt.Sprintf("YJSTask nextTask:%v", nextTask))
+	ch <- nextTask
 }
 
-// 获取详情页数据
-func (task *YJSTask) RunDetail(ctx context.Context, ch chan<- ITask) (*job.Job, error) {
-	if task.Retry <= 0 {
+// RunDetail 获取详情页数据
+func (t *YJSTask) RunDetail(ctx context.Context, ch chan<- ITask) {
+	if t.Retry <= 0 {
 		// 记录日志 不再抓取此任务
-		return nil, utils.ErrorWithCodeMsg(utils.StatusRetryLimit, "重试次数已达上限")
+		log.L(ctx).Info(fmt.Sprintf("YJSTask %v 重试次数已达上限", t))
+		return
 	}
 	// 构造请求
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", task.Url, nil)
+	req, err := http.NewRequest("GET", t.Url, nil)
 	if err != nil {
-		fmt.Printf("Task Request error:%v", err)
+		log.L(ctx).Info(fmt.Sprintf("YJSTask URL:%v Task Request error:%v", t.Url, err))
+		return
 	}
 	req.Header.Add("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36")
 	req.Header.Add("referer", "https://www.yingjiesheng.com/hebeijob/index.html")
@@ -153,15 +181,25 @@ func (task *YJSTask) RunDetail(ctx context.Context, ch chan<- ITask) (*job.Job, 
 	// 请求资源
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Printf("%v\n", err)
-		return nil, nil
+		// 记录日志 重新抓取
+		log.L(ctx).Info(fmt.Sprintf("YJSTask client.Do error:%v", err))
+		t.Retry -= 1
+		log.L(ctx).Info(fmt.Sprintf("YJSTask URL:%v Retry:%v", t.Url, t.Retry))
+		ch <- t
+		return
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	// 读取内容
 	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Printf("%v\n", err)
-		return nil, nil
+		// 记录日志 重新抓取
+		log.L(ctx).Info(fmt.Sprintf("YJSTask ioutil.ReadAll error:%v", err))
+		t.Retry -= 1
+		log.L(ctx).Info(fmt.Sprintf("YJSTask URL:%v Retry:%v", t.Url, t.Retry))
+		ch <- t
+		return
 	}
 	// 编码转换
 	result := utils.ConvertToString(string(content), "GBK", "UTF-8")
@@ -169,16 +207,15 @@ func (task *YJSTask) RunDetail(ctx context.Context, ch chan<- ITask) (*job.Job, 
 		"<div id=\"wordDiv\" class=\"reprintJob tborder\">(?s:(.*?))<ul class=\"linkbtn\">")
 	divs := divPattern.FindAllStringSubmatch(result, 1)
 	if len(divs) > 0 {
-		t, _ := json.Marshal(task)
+		tm, _ := json.Marshal(t)
 		j := &job.Job{
 			Company: divs[0][1],
 			Title:   divs[0][2],
 			Content: divs[0][3],
-			Url:     task.Url,
+			Url:     t.Url,
 			Status:  0,
-			Task:    string(t),
+			Task:    string(tm),
 		}
-		return j, nil
+		log.L(ctx).Info(fmt.Sprintf("YJSTask Detail Job:%v", j))
 	}
-	return nil, nil
 }

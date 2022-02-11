@@ -1,0 +1,4 @@
+{"level":"\u001b[31merror\u001b[0m","ts":"2022-02-09T21:30:41.498+0800","msg":"Test Error Logger"}
+{"level":"\u001b[35mdebug\u001b[0m","ts":"2022-02-09T21:30:41.498+0800","msg":"Test Debug Logger"}
+{"level":"\u001b[33mwarn\u001b[0m","ts":"2022-02-09T21:30:41.498+0800","msg":"Test Warn Logger"}
+{"level":"\u001b[34minfo\u001b[0m","ts":"2022-02-09T21:30:41.499+0800","msg":"Test Info Logger"}

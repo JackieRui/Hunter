@@ -5,17 +5,20 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"git.hunter.net/hunter/internal/dao/log"
+
 	"git.hunter.net/hunter/internal/dao/task"
 	"gopkg.in/yaml.v2"
 )
 
-type ConfigPath string
+type ConfPath string
 
 type Config struct {
+	Logger    log.Config  `yaml:"logger"`
 	YJSConfig task.Config `yaml:"yjs_task"`
 }
 
-func LoadConfig(path ConfigPath) Config {
+func LoadConfig(path ConfPath) Config {
 	bytes := read(string(path))
 	c := Config{}
 
@@ -40,4 +43,8 @@ func read(path string) []byte {
 
 func LoadYJSTaskConfig(conf Config) task.Config {
 	return conf.YJSConfig
+}
+
+func LoadLoggerConfig(conf Config) log.Config {
+	return conf.Logger
 }
